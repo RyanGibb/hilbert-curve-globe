@@ -51,23 +51,36 @@
         return [x, y];
       }
     }
-    
-    // Generate Hilbert Curve
-    const hilbertOrder = 7; // Adjust the order as needed
-    const hilbertPoints = hilbertCurve(hilbertOrder).map(([x, y]) => {
-      const lat = x * 180 - 90; // Scale and shift x coordinate
-      const lng = y * 360 - 180; // Scale and shift y coordinate
-      return [lat, lng, 0]; // Assuming altitude 0 for simplicity
-    });
-    
-    // Convert Hilbert curve points into a format suitable for Globe.pathsData
-    const gData = [hilbertPoints]; 
-    
-    const Globe = new ThreeGlobe({ animateIn: false })
+
+    var Globe = new ThreeGlobe({ animateIn: false })
       .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
       .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
-      .pathsData(gData)
 	  .pathColor(() => '#0066cc');
+
+	const minOrder = 4;
+	const maxOrder = 8;
+    const precomputedCurves = {};
+
+    for (let order = minOrder; order <= maxOrder; order++) {
+      precomputedCurves[order] = hilbertCurve(order).map(([x, y]) => {
+       return [x * 180 - 90, y * 360 - 180, 0]; // Convert to [lat, lng, alt]
+      });
+    }
+
+    function updateGlobeWithHilbert(order) {
+      const hilbertPoints = precomputedCurves[order];
+      Globe.pathsData([hilbertPoints]);
+    }
+    
+    let currentOrder = minOrder;
+    const interval = setInterval(() => {
+      updateGlobeWithHilbert(currentOrder);
+      currentOrder++;
+      if (currentOrder > maxOrder) {
+        currentOrder = minOrder;
+		//clearInterval(interval);
+      }
+    }, 3000);
 
     // Setup renderer
     const renderer = new THREE.WebGLRenderer();
